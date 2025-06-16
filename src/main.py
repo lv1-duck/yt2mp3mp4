@@ -14,10 +14,21 @@ import queue
 # Thread-safe communication queue
 progress_queue = queue.Queue()
 
-venv_base = os.path.dirname(sys.executable)
-ffmpeg_bin_path = os.path.join(venv_base, '..', 'ffmpeg', 'bin')
-ffmpeg_bin_path = os.path.abspath(ffmpeg_bin_path)
-os.environ['PATH'] = ffmpeg_bin_path + os.pathsep + os.environ['PATH']
+#Helper function to locate bundled files in both dev and PyInstaller modes
+def resource_path(relative_path):
+    #Get absolute path to resource, works for dev and for PyInstaller
+    if getattr(sys, 'frozen', False):  # True when running from PyInstaller bundle
+        base_path = sys._MEIPASS
+    else:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
+#locate ffmpeg path (should be bundled into ffmpeg/bin via PyInstaller)
+ffmpeg_bin_path = resource_path('ffmpeg/bin')
+
+#Prepend FFmpeg bin to system PATH
+os.environ['PATH'] = ffmpeg_bin_path + os.pathsep + os.environ.get('PATH', '')
 
 # Configuration
 CONFIG = {
