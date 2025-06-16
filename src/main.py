@@ -1,4 +1,3 @@
-# ================ main.py ================
 import customtkinter
 import tkinter as tk
 from tkinter import messagebox, filedialog
@@ -9,8 +8,6 @@ import requests
 import threading
 from pathlib import Path
 import os
-
-# Import our progress manager
 import progress_manager
 
 # Configuration
@@ -70,7 +67,6 @@ def validate_youtube_url(url: str):
     return True, ""
 
 def get_video_info(url: str):
-    """Get video information using yt-dlp"""
     try:
         ydl_opts = {
             'quiet': True,
@@ -89,7 +85,6 @@ def get_video_info(url: str):
         return False, str(e)
 
 def download_audio(url: str, output_path: str, hook_func=None):
-    """Download audio using yt-dlp"""
     try:
         ydl_opts = {
             'format': 'bestaudio/best',
@@ -110,7 +105,6 @@ def download_audio(url: str, output_path: str, hook_func=None):
         return False, f"Error downloading audio: {e}"
 
 def download_video(url: str, output_path: str, hook_func=None):
-    """Download video using yt-dlp"""
     try:
         ydl_opts = {
             'format': 'best[height<=720]/best',
@@ -126,7 +120,7 @@ def download_video(url: str, output_path: str, hook_func=None):
         return False, f"Error downloading video: {e}"
 
 def create_title_label(parent, title: str):
-    lbl = customtkinter.CTkLabel(
+    label = customtkinter.CTkLabel(
         master=parent,
         text=f"Title: {title}",
         font=("Helvetica", 16),
@@ -134,8 +128,8 @@ def create_title_label(parent, title: str):
         corner_radius=20,
         wraplength=500
     )
-    lbl.pack(pady=10)
-    dynamic_widgets.append(lbl)
+    label.pack(pady=10)
+    dynamic_widgets.append(label)
 
 def create_thumbnail_label(parent, thumbnail_url: str):
     try:
@@ -144,10 +138,10 @@ def create_thumbnail_label(parent, thumbnail_url: str):
         img = Image.open(img_data).resize(CONFIG['thumbnail_size'], Image.LANCZOS)
         img_tk = ImageTk.PhotoImage(img)
 
-        lbl = tk.Label(master=parent, image=img_tk, background="#1e2c42")
-        lbl.image = img_tk
-        lbl.pack(pady=10)
-        dynamic_widgets.append(lbl)
+        label = tk.Label(master=parent, image=img_tk, background="#1e2c42")
+        label.image = img_tk
+        label.pack(pady=10)
+        dynamic_widgets.append(label)
     except Exception as e:
         show_error(f"Could not load thumbnail: {e}")
 
@@ -155,31 +149,31 @@ def create_download_buttons(parent, url: str):
     frame = customtkinter.CTkFrame(master=parent)
     frame.pack(pady=10)
 
-    btn_mp3 = customtkinter.CTkButton(
+    button_mp3 = customtkinter.CTkButton(
         master=frame,
         text="Download as MP3",
         command=lambda: start_download(url, 'mp3')
     )
-    btn_mp4 = customtkinter.CTkButton(
+    button_mp4 = customtkinter.CTkButton(
         master=frame,
         text="Download as MP4",
         command=lambda: start_download(url, 'mp4')
     )
 
-    btn_mp3.pack(side="left", padx=5)
-    btn_mp4.pack(side="left", padx=5)
+    button_mp3.pack(side="left", padx=5)
+    button_mp4.pack(side="left", padx=5)
     dynamic_widgets.append(frame)
 
 def show_error(msg: str):
-    lbl = customtkinter.CTkLabel(
+    label = customtkinter.CTkLabel(
         master=window,
         text=f"Error: {msg}",
         font=("Helvetica", 14),
         fg_color="#ff4c4c",
         corner_radius=20
     )
-    lbl.pack(pady=10)
-    dynamic_widgets.append(lbl)
+    label.pack(pady=10)
+    dynamic_widgets.append(label)
 
 def choose_download_path(file_type: str) -> str:
     default = CONFIG['default_mp3_path'] if file_type == 'mp3' else CONFIG['default_mp4_path']
@@ -190,18 +184,17 @@ def choose_download_path(file_type: str) -> str:
     return chosen if chosen else default
 
 def perform_download_task(url: str, output_path: str, download_type: str):
-    """Perform download task with progress tracking"""
     window.after(0, progress_manager.create_progress_bar, window)
     
-    # Create progress hook
-    hook_func = progress_manager.make_ytdlp_progress_hook(window)
+    #Create progress hook
+    hook_function = progress_manager.make_ytdlp_progress_hook(window)
 
     if download_type == 'mp3':
-        success, msg = download_audio(url, output_path, hook_func)
+        success, msg = download_audio(url, output_path, hook_function)
     else:
-        success, msg = download_video(url, output_path, hook_func)
+        success, msg = download_video(url, output_path, hook_function)
 
-    # Schedule GUI update on main thread
+    #Schedule GUI update on main thread
     window.after(0, lambda: show_download_result_and_cleanup(success, msg))
 
 def show_download_result_and_cleanup(success: bool, message: str):

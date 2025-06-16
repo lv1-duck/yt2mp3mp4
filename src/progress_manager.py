@@ -1,36 +1,32 @@
-# ================ progress_manager.py ================
 import customtkinter
 
-# Simple variables to track progress UI
+#just some state variables to track progress UI
 progress_bar = None
 progress_label = None
 is_cancelled = False
 
 def create_progress_bar(parent):
-    """Create a progress bar and label"""
     global progress_bar, progress_label, is_cancelled
    
-    # Reset cancel flag
     is_cancelled = False
    
-    # Create progress bar
+    #Create progress bar
     progress_bar = customtkinter.CTkProgressBar(parent, width=400)
     progress_bar.set(0)
     progress_bar.pack(pady=10)
    
-    # Create label
+    #Create label
     progress_label = customtkinter.CTkLabel(parent, text="Starting download...")
     progress_label.pack(pady=5)
 
 def update_progress(percentage, status_text=None):
-    """Update the progress bar"""
     global progress_bar, progress_label
    
     if progress_bar and progress_label:
-        # Update bar (needs 0-1, not 0-100)
+        #Update bar (needs 0-1, not 0-100)
         progress_bar.set(percentage / 100)
        
-        # Update text
+        #Update status
         if status_text:
             progress_label.configure(text=status_text)
         elif percentage < 100:
@@ -39,7 +35,6 @@ def update_progress(percentage, status_text=None):
             progress_label.configure(text="Download complete!")
 
 def hide_progress_bar():
-    """Remove the progress bar"""
     global progress_bar, progress_label
    
     if progress_bar:
@@ -51,18 +46,16 @@ def hide_progress_bar():
         progress_label = None
 
 def show_error(message):
-    """Show error message on progress label"""
     global progress_label
    
     if progress_label:
         progress_label.configure(text=f"Error: {message}")
 
 def make_ytdlp_progress_hook(window):
-    """Create a progress hook function for yt-dlp"""
     
     def progress_hook(d):
         if d['status'] == 'downloading':
-            # Calculate percentage
+            #Calculate percentage
             if 'total_bytes' in d:
                 percent = (d['downloaded_bytes'] / d['total_bytes']) * 100
                 total_mb = d['total_bytes'] / (1024 * 1024)
@@ -73,17 +66,17 @@ def make_ytdlp_progress_hook(window):
                 downloaded_mb = d['downloaded_bytes'] / (1024 * 1024)
                 status_text = f"Downloading... {percent:.1f}% (~{downloaded_mb:.1f} MB)"
             else:
-                # No total size available
+                #No total size available
                 downloaded_mb = d.get('downloaded_bytes', 0) / (1024 * 1024)
                 percent = 0
                 status_text = f"Downloading... {downloaded_mb:.1f} MB"
             
-            # Add speed info if available
+            #if available
             if 'speed' in d and d['speed']:
                 speed_mb = d['speed'] / (1024 * 1024)
                 status_text += f" ({speed_mb:.1f} MB/s)"
             
-            # Update UI safely
+            #Update UI
             window.after(0, update_progress, percent, status_text)
             
         elif d['status'] == 'finished':
@@ -97,5 +90,4 @@ def make_ytdlp_progress_hook(window):
     return progress_hook
 
 def auto_hide_after_seconds(window, seconds=3):
-    """Hide progress bar after some seconds"""
     window.after(seconds * 1000, hide_progress_bar)
