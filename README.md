@@ -26,7 +26,7 @@ This was my final project for **CS50P: INTRODUCTION TO PROGRAMMING WITH PYTHON**
 on requirements.txt
 
 ## Usage
-Download a version of the application on [releases]()
+Download a version of the application on [releases]() 
 
 ## Dev guide
 1. Open your IDE 
