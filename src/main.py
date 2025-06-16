@@ -9,14 +9,14 @@ import threading
 from pathlib import Path
 import os
 import sys
+import queue
 
-venv_base = os.path.dirname(sys.executable)  # Points to venv\Scripts\python.exe
+# Thread-safe communication queue
+progress_queue = queue.Queue()
 
-# Path to your extracted ffmpeg\bin
+venv_base = os.path.dirname(sys.executable)
 ffmpeg_bin_path = os.path.join(venv_base, '..', 'ffmpeg', 'bin')
 ffmpeg_bin_path = os.path.abspath(ffmpeg_bin_path)
-
-# Prepend to PATH
 os.environ['PATH'] = ffmpeg_bin_path + os.pathsep + os.environ['PATH']
 
 # Configuration
@@ -34,67 +34,70 @@ window = None
 url_entry = None
 current_url = ""
 dynamic_widgets = [] 
+progress_bar = None
+progress_label = None
+is_cancelled = False
 
 def setup_app():
     customtkinter.set_appearance_mode(CONFIG['appearance_mode'])
     customtkinter.set_default_color_theme(CONFIG['color_theme'])
 
-#just some state variables to track progress UI
-progress_bar = None
-progress_label = None
-is_cancelled = False
-
 def create_progress_bar(parent):
-    global progress_bar, progress_label, is_cancelled
-   
-    is_cancelled = False
-   
-    #Create progress bar
+    global progress_bar, progress_label
     progress_bar = customtkinter.CTkProgressBar(parent, width=400)
     progress_bar.set(0)
     progress_bar.pack(pady=10)
    
-    #Create label
     progress_label = customtkinter.CTkLabel(parent, text="Starting download...")
     progress_label.pack(pady=5)
 
 def update_progress(percentage, status_text=None):
-    global progress_bar, progress_label
-   
     if progress_bar and progress_label:
-        #Update bar (needs 0-1, not 0-100)
         progress_bar.set(percentage / 100)
-       
-        #Update status
         if status_text:
             progress_label.configure(text=status_text)
-        elif percentage < 100:
-            progress_label.configure(text=f"Downloading... {percentage:.1f}%")
         else:
-            progress_label.configure(text="Download complete!")
+            progress_label.configure(text=f"Downloading... {percentage:.1f}%")
 
 def hide_progress_bar():
     global progress_bar, progress_label
-   
     if progress_bar:
         progress_bar.destroy()
         progress_bar = None
-   
     if progress_label:
         progress_label.destroy()
         progress_label = None
 
 def show_progress_error(message):
-    global progress_label
-   
     if progress_label:
         progress_label.configure(text=f"Error: {message}")
 
-def make_ytdlp_progress_hook(window):
+# This runs in the main thread to process queue messages
+def process_queue():
+    try:
+        while True:
+            msg = progress_queue.get_nowait()
+            if msg['type'] == 'progress':
+                update_progress(msg['percentage'], msg.get('status'))
+            elif msg['type'] == 'create':
+                create_progress_bar(window)
+            elif msg['type'] == 'hide':
+                hide_progress_bar()
+            elif msg['type'] == 'error':
+                show_progress_error(msg['message'])
+            elif msg['type'] == 'complete':
+                messagebox.showinfo("Download Complete", msg['message'])
+                hide_progress_bar()
+    except queue.Empty:
+        pass
     
+    # Check queue again every 100ms
+    window.after(100, process_queue)
+
+def make_ytdlp_progress_hook():
     def progress_hook(d):
         if d['status'] == 'downloading':
-            #Calculate percentage
+            # Calculate percentage
             if 'total_bytes' in d:
                 percent = (d['downloaded_bytes'] / d['total_bytes']) * 100
                 total_mb = d['total_bytes'] / (1024 * 1024)
@@ -105,37 +108,45 @@ def make_ytdlp_progress_hook(window):
                 downloaded_mb = d['downloaded_bytes'] / (1024 * 1024)
                 status_text = f"Downloading... {percent:.1f}% (~{downloaded_mb:.1f} MB)"
             else:
-                #No total size available
                 downloaded_mb = d.get('downloaded_bytes', 0) / (1024 * 1024)
                 percent = 0
                 status_text = f"Downloading... {downloaded_mb:.1f} MB"
             
-            #if available
             if 'speed' in d and d['speed']:
                 speed_mb = d['speed'] / (1024 * 1024)
                 status_text += f" ({speed_mb:.1f} MB/s)"
             
-            #Update UI
-            window.after(0, update_progress, percent, status_text)
+            progress_queue.put({
+                'type': 'progress',
+                'percentage': percent,
+                'status': status_text
+            })
             
         elif d['status'] == 'finished':
-            filename = d.get('filename', 'file')
-            window.after(0, update_progress, 100, f"Finished downloading: {filename}")
+            filename = os.path.basename(d.get('filename', 'file'))
+            progress_queue.put({
+                'type': 'progress',
+                'percentage': 100,
+                'status': f"Finished: {filename}"
+            })
             
         elif d['status'] == 'error':
             error_msg = str(d.get('error', 'Unknown error'))
-            window.after(0, lambda: show_progress_error(error_msg))
+            progress_queue.put({
+                'type': 'error',
+                'message': error_msg
+            })
     
     return progress_hook
-
-def auto_hide_after_seconds(window, seconds=3):
-    window.after(seconds * 1000, hide_progress_bar)
 
 def create_main_window():
     global window
     window = customtkinter.CTk()
     window.geometry(CONFIG['window_size'])
     window.title(CONFIG['title'])
+    
+    # Start the queue processing loop
+    window.after(100, process_queue)
     return window
 
 def clear_dynamic_elements():
@@ -155,7 +166,7 @@ def clear_url_entry():
 def reset_app():
     clear_dynamic_elements()
     clear_url_entry()
-    hide_progress_bar()
+    progress_queue.put({'type': 'hide'})
     global current_url
     current_url = ""
 
@@ -169,11 +180,7 @@ def validate_youtube_url(url: str):
 
 def get_video_info(url: str):
     try:
-        ydl_opts = {
-            'quiet': True,
-            'no_warnings': True,
-        }
-        
+        ydl_opts = {'quiet': True, 'no_warnings': True}
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
             return True, {
@@ -185,7 +192,7 @@ def get_video_info(url: str):
     except Exception as e:
         return False, str(e)
 
-def download_audio(url: str, output_path: str, hook_func=None):
+def download_audio(url: str, output_path: str):
     try:
         ydl_opts = {
             'ffmpeg_location': ffmpeg_bin_path,
@@ -196,8 +203,8 @@ def download_audio(url: str, output_path: str, hook_func=None):
                 'preferredcodec': 'mp3',
                 'preferredquality': '192',
             }],
-            'progress_hooks': [hook_func] if hook_func else [],
-            'noplaylist': True
+            'noplaylist': True,
+            'progress_hooks': [make_ytdlp_progress_hook()]
         }
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -207,14 +214,14 @@ def download_audio(url: str, output_path: str, hook_func=None):
     except Exception as e:
         return False, f"Error downloading audio: {e}"
 
-def download_video(url: str, output_path: str, hook_func=None):
+def download_video(url: str, output_path: str):
     try:
         ydl_opts = {
             'ffmpeg_location': ffmpeg_bin_path,
             'format': 'best[height<=720]/best',
             'outtmpl': os.path.join(output_path, '%(title)s.%(ext)s'),
-            'progress_hooks': [hook_func] if hook_func else [],
-            'noplaylist': True
+            'noplaylist': True,
+            'progress_hooks': [make_ytdlp_progress_hook()]
         }
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -289,30 +296,27 @@ def choose_download_path(file_type: str) -> str:
     return chosen if chosen else default
 
 def perform_download_task(url: str, output_path: str, download_type: str):
-    window.after(0, create_progress_bar, window)
-    
-    #Create progress hook
-    hook_function = make_ytdlp_progress_hook(window)
-
-    if download_type == 'mp3':
-        success, msg = download_audio(url, output_path, hook_function)
-    else:
-        success, msg = download_video(url, output_path, hook_function)
-
-    #Schedule GUI update on main thread
-    window.after(0, lambda: show_download_result_and_cleanup(success, msg))
-
-def show_download_result_and_cleanup(success: bool, message: str):
-    if success:
-        messagebox.showinfo("Download Complete", message)
-        auto_hide_after_seconds(window, 3)
-    else:
-        messagebox.showerror("Download Failed", message)
-        window.after(0, lambda: show_progress_error(message))
-        auto_hide_after_seconds(window, 5)
+    try:
+        # Notify main thread to create progress bar
+        progress_queue.put({'type': 'create'})
+        
+        if download_type == 'mp3':
+            success, msg = download_audio(url, output_path)
+        else:
+            success, msg = download_video(url, output_path)
+        
+        if success:
+            progress_queue.put({'type': 'complete', 'message': msg})
+        else:
+            progress_queue.put({'type': 'error', 'message': msg})
+    except Exception as e:
+        progress_queue.put({'type': 'error', 'message': str(e)})
 
 def start_download(url: str, file_type: str):
     path = choose_download_path(file_type)
+    if not path:
+        return
+        
     thread = threading.Thread(
         target=perform_download_task,
         args=(url, path, file_type),
