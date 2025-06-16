@@ -1,9 +1,9 @@
 # YouTube to MP3/MP4 Downloader
 
-A modern, easy-to-use desktop application to download YouTube videos as MP3 (audio) or MP4 (video) using a clean GUI built with `customtkinter`.
+An easy-to-use desktop application to download YouTube videos as MP3 (audio) or MP4 (video) using a clean GUI built with `customtkinter`.
 ## A Final Project For CS50P Entitled "YT2MP3MP4".
 
-This was my final project for **CS50P: INTRODUCTION TO PROGRAMMING WITH PYTHON**. However, this is an improved and refactored version of the project, designed for more convenient usage.
+This was my final project for **CS50P: INTRODUCTION TO PROGRAMMING WITH PYTHON**. However, this is an improved and refactored version of the project, designed for more convenient usage.The current version migrated from [pytubefix](https://github.com/JuanBindez/pytubefix) to [ytp-dl](https://github.com/yt-dlp/yt-dlp).
 
 ## Features
 
