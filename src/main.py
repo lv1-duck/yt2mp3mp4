@@ -9,7 +9,6 @@ import threading
 from pathlib import Path
 import os
 import sys
-import progress_manager
 
 venv_base = os.path.dirname(sys.executable)  # Points to venv\Scripts\python.exe
 
@@ -40,6 +39,98 @@ def setup_app():
     customtkinter.set_appearance_mode(CONFIG['appearance_mode'])
     customtkinter.set_default_color_theme(CONFIG['color_theme'])
 
+#just some state variables to track progress UI
+progress_bar = None
+progress_label = None
+is_cancelled = False
+
+def create_progress_bar(parent):
+    global progress_bar, progress_label, is_cancelled
+   
+    is_cancelled = False
+   
+    #Create progress bar
+    progress_bar = customtkinter.CTkProgressBar(parent, width=400)
+    progress_bar.set(0)
+    progress_bar.pack(pady=10)
+   
+    #Create label
+    progress_label = customtkinter.CTkLabel(parent, text="Starting download...")
+    progress_label.pack(pady=5)
+
+def update_progress(percentage, status_text=None):
+    global progress_bar, progress_label
+   
+    if progress_bar and progress_label:
+        #Update bar (needs 0-1, not 0-100)
+        progress_bar.set(percentage / 100)
+       
+        #Update status
+        if status_text:
+            progress_label.configure(text=status_text)
+        elif percentage < 100:
+            progress_label.configure(text=f"Downloading... {percentage:.1f}%")
+        else:
+            progress_label.configure(text="Download complete!")
+
+def hide_progress_bar():
+    global progress_bar, progress_label
+   
+    if progress_bar:
+        progress_bar.destroy()
+        progress_bar = None
+   
+    if progress_label:
+        progress_label.destroy()
+        progress_label = None
+
+def show_progress_error(message):
+    global progress_label
+   
+    if progress_label:
+        progress_label.configure(text=f"Error: {message}")
+
+def make_ytdlp_progress_hook(window):
+    
+    def progress_hook(d):
+        if d['status'] == 'downloading':
+            #Calculate percentage
+            if 'total_bytes' in d:
+                percent = (d['downloaded_bytes'] / d['total_bytes']) * 100
+                total_mb = d['total_bytes'] / (1024 * 1024)
+                downloaded_mb = d['downloaded_bytes'] / (1024 * 1024)
+                status_text = f"Downloading... {percent:.1f}% ({downloaded_mb:.1f}/{total_mb:.1f} MB)"
+            elif 'total_bytes_estimate' in d:
+                percent = (d['downloaded_bytes'] / d['total_bytes_estimate']) * 100
+                downloaded_mb = d['downloaded_bytes'] / (1024 * 1024)
+                status_text = f"Downloading... {percent:.1f}% (~{downloaded_mb:.1f} MB)"
+            else:
+                #No total size available
+                downloaded_mb = d.get('downloaded_bytes', 0) / (1024 * 1024)
+                percent = 0
+                status_text = f"Downloading... {downloaded_mb:.1f} MB"
+            
+            #if available
+            if 'speed' in d and d['speed']:
+                speed_mb = d['speed'] / (1024 * 1024)
+                status_text += f" ({speed_mb:.1f} MB/s)"
+            
+            #Update UI
+            window.after(0, update_progress, percent, status_text)
+            
+        elif d['status'] == 'finished':
+            filename = d.get('filename', 'file')
+            window.after(0, update_progress, 100, f"Finished downloading: {filename}")
+            
+        elif d['status'] == 'error':
+            error_msg = str(d.get('error', 'Unknown error'))
+            window.after(0, lambda: show_progress_error(error_msg))
+    
+    return progress_hook
+
+def auto_hide_after_seconds(window, seconds=3):
+    window.after(seconds * 1000, hide_progress_bar)
+
 def create_main_window():
     global window
     window = customtkinter.CTk()
@@ -64,7 +155,7 @@ def clear_url_entry():
 def reset_app():
     clear_dynamic_elements()
     clear_url_entry()
-    progress_manager.hide_progress_bar()
+    hide_progress_bar()
     global current_url
     current_url = ""
 
@@ -198,10 +289,10 @@ def choose_download_path(file_type: str) -> str:
     return chosen if chosen else default
 
 def perform_download_task(url: str, output_path: str, download_type: str):
-    window.after(0, progress_manager.create_progress_bar, window)
+    window.after(0, create_progress_bar, window)
     
     #Create progress hook
-    hook_function = progress_manager.make_ytdlp_progress_hook(window)
+    hook_function = make_ytdlp_progress_hook(window)
 
     if download_type == 'mp3':
         success, msg = download_audio(url, output_path, hook_function)
@@ -214,11 +305,11 @@ def perform_download_task(url: str, output_path: str, download_type: str):
 def show_download_result_and_cleanup(success: bool, message: str):
     if success:
         messagebox.showinfo("Download Complete", message)
-        progress_manager.auto_hide_after_seconds(window, 3)
+        auto_hide_after_seconds(window, 3)
     else:
         messagebox.showerror("Download Failed", message)
-        window.after(0, lambda: progress_manager.show_error(message))
-        progress_manager.auto_hide_after_seconds(window, 5)
+        window.after(0, lambda: show_progress_error(message))
+        auto_hide_after_seconds(window, 5)
 
 def start_download(url: str, file_type: str):
     path = choose_download_path(file_type)
@@ -294,15 +385,6 @@ def check_ffmpeg_exists():
     ffprobe = os.path.join(ffmpeg_bin_path, 'ffprobe.exe')
     return os.path.isfile(ffmpeg) and os.path.isfile(ffprobe)
 
-# fallback placeholder if progress_manager is missing
-class DummyProgressManager:
-    def hide_progress_bar(): pass
-    def create_progress_bar(window): pass
-    def auto_hide_after_seconds(window, seconds): pass
-    def make_ytdlp_progress_hook(window): return None
-    def show_error(msg): pass
-
-
 def main():
     setup_app()
     main_win = create_main_window()
@@ -313,9 +395,4 @@ if __name__ == "__main__":
     if not check_ffmpeg_exists():
         messagebox.showerror("FFmpeg Missing", "FFmpeg binaries not found in expected path:\n" + ffmpeg_bin_path)
         sys.exit(1)
-    try:
-        import progress_manager
-    except ImportError:
-        progress_manager = DummyProgressManager
-        
     main()
