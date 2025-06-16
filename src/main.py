@@ -8,7 +8,17 @@ import requests
 import threading
 from pathlib import Path
 import os
+import sys
 import progress_manager
+
+venv_base = os.path.dirname(sys.executable)  # Points to venv\Scripts\python.exe
+
+# Path to your extracted ffmpeg\bin
+ffmpeg_bin_path = os.path.join(venv_base, '..', 'ffmpeg', 'bin')
+ffmpeg_bin_path = os.path.abspath(ffmpeg_bin_path)
+
+# Prepend to PATH
+os.environ['PATH'] = ffmpeg_bin_path + os.pathsep + os.environ['PATH']
 
 # Configuration
 CONFIG = {
@@ -87,6 +97,7 @@ def get_video_info(url: str):
 def download_audio(url: str, output_path: str, hook_func=None):
     try:
         ydl_opts = {
+            'ffmpeg_location': ffmpeg_bin_path,
             'format': 'bestaudio/best',
             'outtmpl': os.path.join(output_path, '%(title)s.%(ext)s'),
             'postprocessors': [{
@@ -95,6 +106,7 @@ def download_audio(url: str, output_path: str, hook_func=None):
                 'preferredquality': '192',
             }],
             'progress_hooks': [hook_func] if hook_func else [],
+            'noplaylist': True
         }
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -107,9 +119,11 @@ def download_audio(url: str, output_path: str, hook_func=None):
 def download_video(url: str, output_path: str, hook_func=None):
     try:
         ydl_opts = {
+            'ffmpeg_location': ffmpeg_bin_path,
             'format': 'best[height<=720]/best',
             'outtmpl': os.path.join(output_path, '%(title)s.%(ext)s'),
             'progress_hooks': [hook_func] if hook_func else [],
+            'noplaylist': True
         }
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -275,6 +289,20 @@ def build_main_interface(parent):
     search_btn.pack(side="left", padx=5)
     clear_btn.pack(side="left", padx=5)
 
+def check_ffmpeg_exists():
+    ffmpeg = os.path.join(ffmpeg_bin_path, 'ffmpeg.exe')
+    ffprobe = os.path.join(ffmpeg_bin_path, 'ffprobe.exe')
+    return os.path.isfile(ffmpeg) and os.path.isfile(ffprobe)
+
+# fallback placeholder if progress_manager is missing
+class DummyProgressManager:
+    def hide_progress_bar(): pass
+    def create_progress_bar(window): pass
+    def auto_hide_after_seconds(window, seconds): pass
+    def make_ytdlp_progress_hook(window): return None
+    def show_error(msg): pass
+
+
 def main():
     setup_app()
     main_win = create_main_window()
@@ -282,4 +310,12 @@ def main():
     main_win.mainloop()
 
 if __name__ == "__main__":
+    if not check_ffmpeg_exists():
+        messagebox.showerror("FFmpeg Missing", "FFmpeg binaries not found in expected path:\n" + ffmpeg_bin_path)
+        sys.exit(1)
+    try:
+        import progress_manager
+    except ImportError:
+        progress_manager = DummyProgressManager
+        
     main()
