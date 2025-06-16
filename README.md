@@ -3,7 +3,7 @@
 An easy-to-use desktop application to download YouTube videos as MP3 (audio) or MP4 (video) using a clean GUI built with `customtkinter`.
 ## A Final Project For CS50P Entitled "YT2MP3MP4".
 
-This was my final project for **CS50P: INTRODUCTION TO PROGRAMMING WITH PYTHON**. However, this is an improved and refactored version of the project, designed for more convenient usage.The current version migrated from [pytubefix](https://github.com/JuanBindez/pytubefix) to [ytp-dl](https://github.com/yt-dlp/yt-dlp) + [codexffmpeg](https://github.com/GyanD/codexffmpeg/releases/tag/2025-06-11-git-f019dd69f0).
+This was my final project for **CS50P: INTRODUCTION TO PROGRAMMING WITH PYTHON**. However, this is an improved and refactored version of the project, designed for more convenient use. The current version migrated from [pytubefix](https://github.com/JuanBindez/pytubefix) to [ytp-dl](https://github.com/yt-dlp/yt-dlp) + [codexffmpeg](https://github.com/GyanD/codexffmpeg/releases/tag/2025-06-11-git-f019dd69f0).
 
 ## Features
 
@@ -26,4 +26,11 @@ This was my final project for **CS50P: INTRODUCTION TO PROGRAMMING WITH PYTHON**
 on requirements.txt
 
 ## Usage
-Just run the main Python file in the project folder
+Download a version of the application on [releases]()
+
+## Dev guide
+1. Open your IDE 
+2. Clone the repo
+3. Create a virtual environment
+5. Download an ffmpeg build from [this GitHub repo](https://github.com/GyanD/codexffmpeg/releases/tag/2025-06-11-git-f019dd69f0)(preferably the lightest one), then extract it into the venv directory. **Please rename the extracted ffmpeg folder to just "ffmpeg" or else it will not be found.**
+
