@@ -31,6 +31,5 @@ Download a version of the application on [releases]()
 ## Dev guide
 1. Open your IDE 
 2. Clone the repo
-3. Create a virtual environment
-5. Download an ffmpeg build from [this GitHub repo](https://github.com/GyanD/codexffmpeg/releases/tag/2025-06-11-git-f019dd69f0)(preferably the lightest one), then extract it into the venv directory. **Please rename the extracted ffmpeg folder to just "ffmpeg" or else it will not be found.**
+3. Install the dependencies.
 
