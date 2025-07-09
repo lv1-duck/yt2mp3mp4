@@ -4,7 +4,7 @@ __pycache__/
 *.pyo
 
 # Virtual environment
-venv/
+.venv/
 
 # VSCode settings (if using)
 .vscode/

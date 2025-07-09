@@ -25,7 +25,7 @@ def resource_path(relative_path):
 
 ffmpeg_bin_path = resource_path('ffmpeg/bin')
 
-# Configuration
+# Dict for configuration
 CONFIG = {
     'window_size': "720x640",
     'title': "YouTube to MP3/MP4",
