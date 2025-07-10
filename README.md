@@ -12,7 +12,6 @@ This was my final project for **CS50P: INTRODUCTION TO PROGRAMMING WITH PYTHON**
 -  Download the highest resolution video (only MP4). Quality options are yet to be implemented 
 -  Display video title and thumbnail
 -  Choose custom save locations
--  Progress bar with percentage
 -  Clear/reset interface
 -  Responsive via background threading
 
