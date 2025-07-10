@@ -20,16 +20,10 @@ This was my final project for **CS50P: INTRODUCTION TO PROGRAMMING WITH PYTHON**
 - Python 3.8+
 - Internet connection
 
-## Dependencies
 
-on requirements.txt
-
-## Usage
-Download a version of the application on [releases]() 
-
-## Dev guide
+## Guide
 1. Open your IDE 
 2. Clone the repo
 3. Install the dependencies.
-
+(Maybe i'll release a pyinstaller version someday for easier use)
 
