@@ -10,11 +10,6 @@ from pathlib import Path
 import os
 import sys
 
-def resource_path(relative_path):
-    #Get absolute path to resource, works for dev
-    base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-    return os.path.join(base_path, relative_path)
-
 ffmpeg_binary_path = resource_path('ffmpeg/bin')
 
 
@@ -92,7 +87,8 @@ def get_video_info(url: str):
         return False, str(e)
 
 def download_audio(url: str, output_path: str):
-    # PRETTY CONFUSING, BUT THATS HOW ITS DONE IN THE DOCUMENTATION
+    # COPY PASTED FROM yt_dlp DOCUMENTATION
+    # WITH MINOR MODIFICATIONS
     try:
         ydl_opts = {
             'ffmpeg_location': ffmpeg_binary_path,
@@ -112,7 +108,8 @@ def download_audio(url: str, output_path: str):
         return False, f"Error downloading audio: {e}"
 
 def download_video(url: str, output_path: str):
-    # ...
+    # COPY PASTED FROM yt_dlp DOCUMENTATION
+    # WITH MINOR MODIFICATIONS
     try:
         ydl_opts = {
             'ffmpeg_location': ffmpeg_binary_path,
@@ -232,15 +229,13 @@ def update_video_display(success: bool, result):
 def search_video():
     global current_url
     url = url_entry.get().strip()
-    current_url = url  # Set the current_url here
+    current_url = url  
     validity, msg = validate_youtube_url(url)
     if not validity:
         messagebox.showwarning("Invalid URL", msg)
         return
     clear_dynamic_elements()
 
-    # SEPERATE THREAD FOR FETCHING VIDEO INFO AND THUMBNAIL
-    # FIX: Use (url,) instead of (url) to pass a single string argument
     thread = threading.Thread(   
         target=fetch_and_display_video_info,
         args=(url,),  # Note the comma here - this makes it a tuple with one element
@@ -281,7 +276,6 @@ def check_ffmpeg_exists():
     return os.path.isfile(ffmpeg) and os.path.isfile(ffprobe)
 
 def main():
-    # MAIN ENTRY POINT
     global window, url_entry, dynamic_widgets, progress_bar, progress_label
     setup_app()
     main_win = create_main_window()
