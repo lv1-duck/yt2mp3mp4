@@ -2,7 +2,6 @@ import tkinter
 from tkinter import messagebox
 import customtkinter
 
-# Using pytubefix as requested
 from pytubefix import YouTube
 import requests
 from PIL import Image, ImageTk
@@ -103,10 +102,10 @@ def check(entry_val):
                 thumbnail_image_ref = tkimg
                 current_thumbnail_label.pack(pady=10)
             except Exception as img_err:
-                # thumbnail fetch failed; continue without it
+                # thumbnail fetch faile, continue without it
                 print("Thumbnail fetch error:", img_err)
 
-        # Add download button (keeps original naming)
+        # Add download button
         download_mp4 = customtkinter.CTkButton(window, text="Download as mp3", command=lambda: download_to_mp3(url))
         download_mp4.pack(pady=10)
 
@@ -146,3 +145,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
