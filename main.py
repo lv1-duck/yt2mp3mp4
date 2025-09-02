@@ -1,15 +1,3 @@
-"""
-Simplified GUI: restored to your original structure but cleaned up a little and pinned to `pytubefix`.
-- Uses pytubefix.YouTube as you requested (no pytube fallback)
-- Keeps the same global-style UI state and functions (restart, check, download_to_mp3)
-- No threading, no ffmpeg conversion — downloads the audio stream file that pytubefix returns
-- Keeps thumbnail display and prevents the image from being garbage-collected
-
-Dependencies:
-    pip install customtkinter pytubefix requests pillow
-
-"""
-
 import tkinter
 from tkinter import messagebox
 import customtkinter
